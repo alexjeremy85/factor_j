@@ -1,0 +1,25 @@
+# Swift Package Manager
+.build/
+.build-release/
+.swiftpm/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcodeproj
+
+# macOS
+.DS_Store
+
+# Editores
+.vscode/
+
+# Modelos de ML (baixados via scripts/fetch_models.sh — nunca versionados)
+Models/
+*.mlmodelc
+*.mlpackage
+
+# Artefatos de empacotamento
+dist/
+*.app
+*.dmg
