@@ -7,8 +7,9 @@
 # Este é o ÚNICO momento em que há rede envolvida; o app em si nunca conecta.
 #
 # Uso:
-#   ./scripts/fetch_models.sh            # turbo + diarização (~1,7 GB)
+#   ./scripts/fetch_models.sh             # turbo + diarização (~1,7 GB)
 #   ./scripts/fetch_models.sh --with-base  # inclui Whisper base (~+150 MB)
+#   ./scripts/fetch_models.sh --with-large # inclui large-v3 completo (~+3 GB)
 #
 # Alternativa ao assistente do próprio app (Ajustes → Modelos).
 # Requer o CLI do Hugging Face (hf ou huggingface-cli). Se não tiver:
@@ -18,7 +19,11 @@ set -euo pipefail
 
 MODELS_DIR="${FACTORJ_MODELS_DIR:-$HOME/Library/Application Support/FactorJ/Models}"
 WITH_BASE=0
-[[ "${1:-}" == "--with-base" ]] && WITH_BASE=1
+WITH_LARGE=0
+for arg in "$@"; do
+    [[ "$arg" == "--with-base" ]] && WITH_BASE=1
+    [[ "$arg" == "--with-large" ]] && WITH_LARGE=1
+done
 
 # Localiza o CLI do Hugging Face.
 HF=""
@@ -46,6 +51,7 @@ if [[ "$FREE_GB" -lt 4 ]]; then
 fi
 
 TURBO="openai_whisper-large-v3-v20240930_turbo"
+LARGE="openai_whisper-large-v3-v20240930"
 BASE="openai_whisper-base"
 
 echo ""
@@ -59,6 +65,17 @@ echo "==> [2/4] Tokenizer do large-v3 (offline)…"
 "$HF" download openai/whisper-large-v3 \
     tokenizer.json tokenizer_config.json config.json \
     --local-dir "$MODELS_DIR/whisperkit/tokenizers/$TURBO"
+
+if [[ "$WITH_LARGE" == "1" ]]; then
+    echo ""
+    echo "==> [extra] Whisper large-v3 completo (~3 GB)…"
+    "$HF" download argmaxinc/whisperkit-coreml \
+        --include "$LARGE/*" \
+        --local-dir "$MODELS_DIR/whisperkit"
+    "$HF" download openai/whisper-large-v3 \
+        tokenizer.json tokenizer_config.json config.json \
+        --local-dir "$MODELS_DIR/whisperkit/tokenizers/$LARGE"
+fi
 
 if [[ "$WITH_BASE" == "1" ]]; then
     echo ""

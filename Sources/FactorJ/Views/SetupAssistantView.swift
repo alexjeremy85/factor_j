@@ -95,7 +95,7 @@ struct SetupAssistantView: View {
 
     private var idleContent: some View {
         VStack(spacing: 14) {
-            Text("O Factor J transcreve tudo no seu Mac, sem nuvem. Para isso, precisa baixar os modelos uma única vez (~1,7 GB). Esta é a única etapa que usa internet — depois dela, o app funciona 100% offline.")
+            Text("O Factor J transcreve tudo no seu Mac, sem nuvem. Para isso, precisa baixar os modelos do modelo de transcrição escolhido nos Ajustes (padrão: ~1,7 GB). Esta é a única etapa que usa internet — depois dela, o app funciona 100% offline.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

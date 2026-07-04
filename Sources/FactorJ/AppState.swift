@@ -34,7 +34,7 @@ final class AppState: ObservableObject {
     @Published var searchText = ""
     @Published var searchHits: [AppDatabase.SearchHit] = []
     @Published var modelAvailability = ModelAvailability(
-        whisperTurbo: false, whisperBase: false, diarization: false
+        whisperTurbo: false, whisperLarge: false, whisperBase: false, diarization: false
     )
     @Published var pendingSeek: PendingSeek?
     @Published var bootError: String?

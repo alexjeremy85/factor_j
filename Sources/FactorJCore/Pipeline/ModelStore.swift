@@ -5,6 +5,8 @@ import Foundation
 public enum WhisperModelQuality: String, CaseIterable, Identifiable, Sendable {
     /// large-v3-turbo — qualidade (default).
     case turbo
+    /// large-v3 completo — máxima precisão, ~2× mais lento que o turbo.
+    case large
     /// base multilíngue — velocidade / preview.
     case base
 
@@ -13,6 +15,7 @@ public enum WhisperModelQuality: String, CaseIterable, Identifiable, Sendable {
     public var modelFolderName: String {
         switch self {
         case .turbo: return "openai_whisper-large-v3-v20240930_turbo"
+        case .large: return "openai_whisper-large-v3-v20240930"
         case .base: return "openai_whisper-base"
         }
     }
@@ -20,6 +23,7 @@ public enum WhisperModelQuality: String, CaseIterable, Identifiable, Sendable {
     public var displayName: String {
         switch self {
         case .turbo: return "large-v3-turbo (qualidade)"
+        case .large: return "large-v3 (máxima qualidade)"
         case .base: return "base (velocidade)"
         }
     }
@@ -27,7 +31,7 @@ public enum WhisperModelQuality: String, CaseIterable, Identifiable, Sendable {
     /// Repositório HF do tokenizer correspondente (usado só no fetch_models.sh).
     public var tokenizerRepo: String {
         switch self {
-        case .turbo: return "openai/whisper-large-v3"
+        case .turbo, .large: return "openai/whisper-large-v3"
         case .base: return "openai/whisper-base"
         }
     }
@@ -36,11 +40,13 @@ public enum WhisperModelQuality: String, CaseIterable, Identifiable, Sendable {
 /// Disponibilidade dos modelos embarcados (§3).
 public struct ModelAvailability: Equatable, Sendable {
     public var whisperTurbo: Bool
+    public var whisperLarge: Bool
     public var whisperBase: Bool
     public var diarization: Bool
 
-    public init(whisperTurbo: Bool, whisperBase: Bool, diarization: Bool) {
+    public init(whisperTurbo: Bool, whisperLarge: Bool, whisperBase: Bool, diarization: Bool) {
         self.whisperTurbo = whisperTurbo
+        self.whisperLarge = whisperLarge
         self.whisperBase = whisperBase
         self.diarization = diarization
     }
@@ -48,11 +54,12 @@ public struct ModelAvailability: Equatable, Sendable {
     public func whisperAvailable(_ quality: WhisperModelQuality) -> Bool {
         switch quality {
         case .turbo: return whisperTurbo
+        case .large: return whisperLarge
         case .base: return whisperBase
         }
     }
 
-    public var anyWhisper: Bool { whisperTurbo || whisperBase }
+    public var anyWhisper: Bool { whisperTurbo || whisperLarge || whisperBase }
 }
 
 /// Localiza e valida os modelos de ML no diretório de dados.
@@ -136,6 +143,7 @@ public struct ModelStore: Sendable {
     public func availability() -> ModelAvailability {
         ModelAvailability(
             whisperTurbo: isWhisperAvailable(.turbo),
+            whisperLarge: isWhisperAvailable(.large),
             whisperBase: isWhisperAvailable(.base),
             diarization: isDiarizationAvailable()
         )

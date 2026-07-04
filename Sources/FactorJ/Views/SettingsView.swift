@@ -78,7 +78,7 @@ private struct GeneralSettingsView: View {
                         Text(quality.displayName).tag(quality.rawValue)
                     }
                 }
-                Text("large-v3-turbo entrega a melhor qualidade em pt-BR; base é mais rápido e leve.")
+                Text("turbo é o melhor custo-benefício em pt-BR. O large-v3 completo maximiza a precisão (~2× mais lento; download de ~3 GB). base é o mais leve. Modelo ausente? Selecione-o aqui e use Modelos → Baixar/reparar.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -121,6 +121,10 @@ private struct ModelsSettingsView: View {
                 availabilityRow(
                     "Whisper large-v3-turbo",
                     available: appState.modelAvailability.whisperTurbo
+                )
+                availabilityRow(
+                    "Whisper large-v3 (máxima qualidade)",
+                    available: appState.modelAvailability.whisperLarge
                 )
                 availabilityRow(
                     "Whisper base (rápido)",
