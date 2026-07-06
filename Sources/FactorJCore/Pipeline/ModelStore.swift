@@ -43,12 +43,20 @@ public struct ModelAvailability: Equatable, Sendable {
     public var whisperLarge: Bool
     public var whisperBase: Bool
     public var diarization: Bool
+    public var diarizationVbx: Bool
 
-    public init(whisperTurbo: Bool, whisperLarge: Bool, whisperBase: Bool, diarization: Bool) {
+    public init(
+        whisperTurbo: Bool,
+        whisperLarge: Bool,
+        whisperBase: Bool,
+        diarization: Bool,
+        diarizationVbx: Bool = false
+    ) {
         self.whisperTurbo = whisperTurbo
         self.whisperLarge = whisperLarge
         self.whisperBase = whisperBase
         self.diarization = diarization
+        self.diarizationVbx = diarizationVbx
     }
 
     public func whisperAvailable(_ quality: WhisperModelQuality) -> Bool {
@@ -111,6 +119,19 @@ public struct ModelStore: Sendable {
         diarizationDirectory.appendingPathComponent("wespeaker_v2.mlmodelc")
     }
 
+    /// Modelos do motor VBx (layout exigido pela FluidAudio: subpasta com
+    /// o nome do repositório dentro da pasta de modelos).
+    public var vbxDirectory: URL {
+        modelsDirectory.appendingPathComponent("speaker-diarization-coreml", isDirectory: true)
+    }
+
+    /// Pasta-mãe passada ao `OfflineDiarizerModels.load(from:)`.
+    public var vbxParentDirectory: URL { modelsDirectory }
+
+    public static let vbxModelNames = [
+        "Segmentation.mlmodelc", "FBank.mlmodelc", "Embedding.mlmodelc", "PldaRho.mlmodelc",
+    ]
+
     public var checksumsURL: URL {
         modelsDirectory.appendingPathComponent("SHA256SUMS.txt")
     }
@@ -140,12 +161,28 @@ public struct ModelStore: Sendable {
             && isCompiledModelPresent(embeddingModelURL)
     }
 
+    public func isVbxAvailable() -> Bool {
+        let fm = FileManager.default
+        let modelsOk = Self.vbxModelNames.allSatisfy { name in
+            fm.fileExists(
+                atPath: vbxDirectory
+                    .appendingPathComponent(name)
+                    .appendingPathComponent("coremldata.bin").path
+            )
+        }
+        return modelsOk
+            && fm.fileExists(
+                atPath: vbxDirectory.appendingPathComponent("plda-parameters.json").path
+            )
+    }
+
     public func availability() -> ModelAvailability {
         ModelAvailability(
             whisperTurbo: isWhisperAvailable(.turbo),
             whisperLarge: isWhisperAvailable(.large),
             whisperBase: isWhisperAvailable(.base),
-            diarization: isDiarizationAvailable()
+            diarization: isDiarizationAvailable(),
+            diarizationVbx: isVbxAvailable()
         )
     }
 

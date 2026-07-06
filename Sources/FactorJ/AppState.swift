@@ -10,6 +10,7 @@ struct ImportOptions {
     var diarize: Bool = true
     /// nil = automático.
     var speakersHint: Int?
+    var sensitivity: VoiceSensitivity = .normal
 }
 
 /// Navegação pós-busca: abrir gravação e pular para o timestamp.
@@ -187,7 +188,10 @@ final class AppState: ObservableObject {
                     status: .queued,
                     language: options.language,
                     diarize: options.diarize,
-                    speakersHint: options.speakersHint
+                    speakersHint: options.speakersHint,
+                    clusteringSensitivity: options.sensitivity == .normal
+                        ? nil
+                        : options.sensitivity.rawValue
                 ))
                 lastId = recording.id
             } catch {

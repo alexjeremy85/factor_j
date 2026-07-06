@@ -115,6 +115,49 @@ public struct PipelineProgress: Equatable, Sendable {
     }
 }
 
+// MARK: - Sensibilidade de separação de vozes
+
+/// Quão agressivamente o algoritmo separa vozes parecidas em falantes
+/// diferentes. Nível semântico, mapeado para o limiar de cada motor.
+public enum VoiceSensitivity: String, CaseIterable, Identifiable, Sendable {
+    /// Equilíbrio padrão do motor.
+    case normal
+    /// Separa mais (bom quando há vozes parecidas sendo fundidas).
+    case high
+    /// Separa menos (bom quando a mesma pessoa está sendo dividida).
+    case low
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .normal: return "Padrão"
+        case .high: return "Separar mais (vozes parecidas)"
+        case .low: return "Separar menos (falante duplicado)"
+        }
+    }
+
+    /// Limiar de similaridade de cosseno do motor padrão (default 0,7;
+    /// menor = mais falantes).
+    public var standardThreshold: Float {
+        switch self {
+        case .normal: return 0.7
+        case .high: return 0.62
+        case .low: return 0.78
+        }
+    }
+
+    /// Limiar de distância euclidiana do motor VBx (default 0,6;
+    /// menor = mais falantes).
+    public var vbxThreshold: Double {
+        switch self {
+        case .normal: return 0.6
+        case .high: return 0.5
+        case .low: return 0.7
+        }
+    }
+}
+
 // MARK: - Protocolos dos motores (permitem testes sem modelos reais)
 
 public protocol TranscriptionEngine: AnyObject {
@@ -137,6 +180,16 @@ public protocol DiarizationEngine: AnyObject {
     /// Diariza amostras 16 kHz mono a partir do offset dado. Chamadas
     /// sucessivas na mesma instância mantêm a identidade dos falantes.
     func diarize(samples: [Float], offsetMs: Int) throws -> [DiarizedSpan]
+}
+
+/// Motor que processa o arquivo inteiro de uma vez (re-clustering global —
+/// mais preciso para 3+ falantes que o processamento em janelas).
+public protocol WholeFileDiarizationEngine: AnyObject {
+    /// Diariza o arquivo completo (WAV 16 kHz mono). `onProgress` recebe 0…1.
+    func diarize(
+        fileURL: URL,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> [DiarizedSpan]
 }
 
 // MARK: - Erros

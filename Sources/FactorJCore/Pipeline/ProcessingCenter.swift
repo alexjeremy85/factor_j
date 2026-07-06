@@ -32,6 +32,11 @@ public final class ProcessingCenter: ObservableObject {
         return WhisperModelQuality(rawValue: raw) ?? .turbo
     }
 
+    /// Motor de diarização escolhido em Ajustes.
+    public static var vbxSelected: Bool {
+        UserDefaults.standard.string(forKey: "factorj.diarizerEngine") == "vbx"
+    }
+
     // MARK: - API
 
     /// Garante que o worker está rodando (chame após enfileirar).
@@ -108,22 +113,41 @@ public final class ProcessingCenter: ObservableObject {
         guard modelStore.isWhisperAvailable(quality) else {
             throw PipelineError.modelsMissing("Whisper \(quality.displayName)")
         }
-        if recording.diarize, !modelStore.isDiarizationAvailable() {
+        let useVbx = recording.diarize && Self.vbxSelected
+        if useVbx, !modelStore.isVbxAvailable() {
+            throw PipelineError.modelsMissing(
+                "diarização VBx — baixe em Ajustes → Modelos ou volte para o motor padrão"
+            )
+        }
+        if recording.diarize, !useVbx, !modelStore.isDiarizationAvailable() {
             throw PipelineError.modelsMissing("diarização (pyannote/wespeaker)")
         }
 
         try database.setStatus(recordingId: id, status: .processing)
 
         let transcriber = try await loadTranscriber(quality: quality)
-        let diarizer: DiarizationEngine? = recording.diarize
+        let sensitivity = recording.voiceSensitivity
+        let diarizer: DiarizationEngine? = (recording.diarize && !useVbx)
             ? try FluidAudioDiarizer(
                 segmentationModel: modelStore.segmentationModelURL,
                 embeddingModel: modelStore.embeddingModelURL,
-                numSpeakers: recording.speakersHint
+                numSpeakers: recording.speakersHint,
+                sensitivity: sensitivity
+            )
+            : nil
+        let wholeFileDiarizer: WholeFileDiarizationEngine? = useVbx
+            ? try await VbxDiarizer(
+                modelsParentDirectory: modelStore.vbxParentDirectory,
+                numSpeakers: recording.speakersHint,
+                sensitivity: sensitivity
             )
             : nil
 
-        let pipeline = ProcessingPipeline(transcriber: transcriber, diarizer: diarizer)
+        let pipeline = ProcessingPipeline(
+            transcriber: transcriber,
+            diarizer: diarizer,
+            wholeFileDiarizer: wholeFileDiarizer
+        )
         let sourceURL = dataStore.absoluteURL(for: recording.audioPath)
         let workingWavURL = dataStore.tempWavURL(recordingId: id)
         let language = recording.language

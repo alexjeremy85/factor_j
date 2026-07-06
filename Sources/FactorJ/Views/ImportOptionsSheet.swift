@@ -9,6 +9,7 @@ struct ImportOptionsSheet: View {
     @State private var language = "auto"
     @State private var diarize = true
     @State private var speakersMode = 0  // 0 = auto
+    @State private var sensitivity = VoiceSensitivity.normal
 
     private static let languages: [(code: String, name: String)] = [
         ("auto", "Detectar automaticamente"),
@@ -54,6 +55,13 @@ struct ImportOptionsSheet: View {
             }
             .disabled(!diarize)
 
+            Picker("Separação de vozes", selection: $sensitivity) {
+                ForEach(VoiceSensitivity.allCases) { level in
+                    Text(level.displayName).tag(level)
+                }
+            }
+            .disabled(!diarize)
+
             HStack {
                 Spacer()
                 Button("Cancelar", role: .cancel) {
@@ -66,7 +74,8 @@ struct ImportOptionsSheet: View {
                     appState.confirmImport(options: ImportOptions(
                         language: language == "auto" ? nil : language,
                         diarize: diarize,
-                        speakersHint: speakersMode == 0 ? nil : speakersMode
+                        speakersHint: speakersMode == 0 ? nil : speakersMode,
+                        sensitivity: sensitivity
                     ))
                 }
                 .keyboardShortcut(.defaultAction)

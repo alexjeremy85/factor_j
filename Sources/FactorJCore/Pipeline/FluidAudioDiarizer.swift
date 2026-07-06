@@ -13,9 +13,11 @@ public final class FluidAudioDiarizer: DiarizationEngine {
     public init(
         segmentationModel: URL,
         embeddingModel: URL,
-        numSpeakers: Int? = nil
+        numSpeakers: Int? = nil,
+        sensitivity: VoiceSensitivity = .normal
     ) throws {
         var config = DiarizerConfig()
+        config.clusteringThreshold = sensitivity.standardThreshold
         if let numSpeakers, numSpeakers > 0 {
             config.numClusters = numSpeakers
         }

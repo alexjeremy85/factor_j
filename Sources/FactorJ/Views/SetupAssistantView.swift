@@ -23,7 +23,11 @@ final class SetupAssistantModel: ObservableObject {
         downloader = ModelDownloader(modelStore: modelStore)
     }
 
-    func start(quality: WhisperModelQuality, onFinished: @escaping () -> Void) {
+    func start(
+        quality: WhisperModelQuality,
+        includeVbx: Bool,
+        onFinished: @escaping () -> Void
+    ) {
         guard task == nil else { return }
         state = .downloading(ModelDownloader.Progress(
             totalBytes: 0, downloadedBytes: 0, currentFile: "Listando arquivos…",
@@ -31,7 +35,7 @@ final class SetupAssistantModel: ObservableObject {
         ))
         task = Task { [downloader] in
             do {
-                try await downloader.install(quality: quality) { progress in
+                try await downloader.install(quality: quality, includeVbx: includeVbx) { progress in
                     Task { @MainActor [weak self] in
                         // Reporta no máximo ~10×/s já que didWriteData é frequente.
                         if case .downloading = self?.state {
@@ -60,6 +64,7 @@ struct SetupAssistantView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: SetupAssistantModel
     @AppStorage("escriba.modelQuality") private var modelQuality = WhisperModelQuality.turbo.rawValue
+    @AppStorage("factorj.diarizerEngine") private var diarizerEngine = "standard"
 
     init(modelStore: ModelStore) {
         _model = StateObject(wrappedValue: SetupAssistantModel(modelStore: modelStore))
@@ -102,7 +107,7 @@ struct SetupAssistantView: View {
             HStack {
                 Button("Agora não") { dismiss() }
                 Button("Baixar e instalar") {
-                    model.start(quality: quality) {
+                    model.start(quality: quality, includeVbx: diarizerEngine == "vbx") {
                         appState.refreshModelAvailability()
                     }
                 }
@@ -162,7 +167,7 @@ struct SetupAssistantView: View {
                 Button("Fechar") { dismiss() }
                 Button("Tentar de novo") {
                     model.state = .idle
-                    model.start(quality: quality) {
+                    model.start(quality: quality, includeVbx: diarizerEngine == "vbx") {
                         appState.refreshModelAvailability()
                     }
                 }

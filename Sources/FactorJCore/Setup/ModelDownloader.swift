@@ -92,7 +92,7 @@ public final class ModelDownloader {
     }
 
     /// Monta a lista completa de arquivos para a qualidade escolhida.
-    func buildPlan(quality: WhisperModelQuality) async throws -> [RemoteFile] {
+    func buildPlan(quality: WhisperModelQuality, includeVbx: Bool) async throws -> [RemoteFile] {
         var plan: [RemoteFile] = []
 
         // Whisper (pasta inteira do modelo dentro do repo da Argmax)
@@ -131,6 +131,26 @@ public final class ModelDownloader {
             }
         }
 
+        // Motor VBx (opcional): modelos offline no mesmo repo da FluidInference.
+        if includeVbx {
+            for prefix in ModelStore.vbxModelNames {
+                for entry in try await listFiles(repo: diarizationRepo, prefix: prefix) {
+                    plan.append(RemoteFile(
+                        repo: diarizationRepo,
+                        path: entry.path,
+                        size: entry.effectiveSize,
+                        destination: modelStore.vbxDirectory.appendingPathComponent(entry.path)
+                    ))
+                }
+            }
+            plan.append(RemoteFile(
+                repo: diarizationRepo,
+                path: "plda-parameters.json",
+                size: 0,
+                destination: modelStore.vbxDirectory.appendingPathComponent("plda-parameters.json")
+            ))
+        }
+
         guard !plan.isEmpty else {
             throw DownloadError.listingFailed(whisperRepo)
         }
@@ -142,9 +162,10 @@ public final class ModelDownloader {
     /// Baixa tudo que falta e regenera o SHA256SUMS.txt.
     public func install(
         quality: WhisperModelQuality,
+        includeVbx: Bool = false,
         onProgress: @escaping @Sendable (Progress) -> Void
     ) async throws {
-        let plan = try await buildPlan(quality: quality)
+        let plan = try await buildPlan(quality: quality, includeVbx: includeVbx)
         let fm = FileManager.default
 
         // Arquivos já completos (mesmo tamanho) são pulados — retomada natural.

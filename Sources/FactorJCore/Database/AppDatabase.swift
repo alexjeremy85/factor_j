@@ -93,6 +93,12 @@ public final class AppDatabase {
             }
         }
 
+        migrator.registerMigration("v2-voice-sensitivity") { db in
+            try db.alter(table: "recording") { t in
+                t.add(column: "clusteringSensitivity", .text)
+            }
+        }
+
         return migrator
     }
 

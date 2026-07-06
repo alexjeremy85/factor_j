@@ -10,6 +10,7 @@
 #   ./scripts/fetch_models.sh             # turbo + diarização (~1,7 GB)
 #   ./scripts/fetch_models.sh --with-base  # inclui Whisper base (~+150 MB)
 #   ./scripts/fetch_models.sh --with-large # inclui large-v3 completo (~+3 GB)
+#   ./scripts/fetch_models.sh --with-vbx   # inclui diarização VBx (~+40 MB)
 #
 # Alternativa ao assistente do próprio app (Ajustes → Modelos).
 # Requer o CLI do Hugging Face (hf ou huggingface-cli). Se não tiver:
@@ -20,9 +21,11 @@ set -euo pipefail
 MODELS_DIR="${FACTORJ_MODELS_DIR:-$HOME/Library/Application Support/FactorJ/Models}"
 WITH_BASE=0
 WITH_LARGE=0
+WITH_VBX=0
 for arg in "$@"; do
     [[ "$arg" == "--with-base" ]] && WITH_BASE=1
     [[ "$arg" == "--with-large" ]] && WITH_LARGE=1
+    [[ "$arg" == "--with-vbx" ]] && WITH_VBX=1
 done
 
 # Localiza o CLI do Hugging Face.
@@ -93,6 +96,18 @@ echo "==> [3/4] Diarização: pyannote segmentation + WeSpeaker (CoreML, ~30 MB)
 "$HF" download FluidInference/speaker-diarization-coreml \
     --include "pyannote_segmentation.mlmodelc/*" "wespeaker_v2.mlmodelc/*" \
     --local-dir "$MODELS_DIR/diarization"
+
+if [[ "$WITH_VBX" == "1" ]]; then
+    echo ""
+    echo "==> [extra] Diarização VBx (alta precisão, ~40 MB)…"
+    "$HF" download FluidInference/speaker-diarization-coreml \
+        --include "Segmentation.mlmodelc/*" "FBank.mlmodelc/*" \
+                  "Embedding.mlmodelc/*" "PldaRho.mlmodelc/*" \
+        --local-dir "$MODELS_DIR/speaker-diarization-coreml"
+    "$HF" download FluidInference/speaker-diarization-coreml \
+        plda-parameters.json \
+        --local-dir "$MODELS_DIR/speaker-diarization-coreml"
+fi
 
 echo ""
 echo "==> [4/4] Gerando SHA256SUMS.txt (verificação de integridade)…"

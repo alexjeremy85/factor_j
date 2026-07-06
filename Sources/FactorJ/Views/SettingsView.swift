@@ -23,6 +23,7 @@ private struct GeneralSettingsView: View {
     @EnvironmentObject private var appState: AppState
     @AppStorage("escriba.defaultLanguage") private var defaultLanguage = "auto"
     @AppStorage("escriba.modelQuality") private var modelQuality = WhisperModelQuality.turbo.rawValue
+    @AppStorage("factorj.diarizerEngine") private var diarizerEngine = "standard"
     @AppStorage("factorj.menuBarEnabled") private var menuBarEnabled = true
     @AppStorage("factorj.hotkeyEnabled") private var hotkeyEnabled = true
     @AppStorage("factorj.hotkeyPreset") private var hotkeyPreset = "opt-cmd-r"
@@ -81,6 +82,14 @@ private struct GeneralSettingsView: View {
                 Text("turbo é o melhor custo-benefício em pt-BR. O large-v3 completo maximiza a precisão (~2× mais lento; download de ~3 GB). base é o mais leve. Modelo ausente? Selecione-o aqui e use Modelos → Baixar/reparar.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Picker("Diarização", selection: $diarizerEngine) {
+                    Text("Padrão (rápida)").tag("standard")
+                    Text("VBx (alta precisão, 3+ falantes)").tag("vbx")
+                }
+                Text("O motor VBx reagrupa os falantes olhando a gravação inteira — mais preciso com vários participantes. Requer download extra (~40 MB) em Modelos → Baixar/reparar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Gravação e segundo plano") {
@@ -133,6 +142,10 @@ private struct ModelsSettingsView: View {
                 availabilityRow(
                     "Diarização (pyannote + WeSpeaker)",
                     available: appState.modelAvailability.diarization
+                )
+                availabilityRow(
+                    "Diarização VBx (alta precisão)",
+                    available: appState.modelAvailability.diarizationVbx
                 )
                 Button("Baixar / reparar modelos…") {
                     appState.showSetupAssistant = true

@@ -13,10 +13,16 @@ public final class ProcessingPipeline {
 
     private let transcriber: TranscriptionEngine
     private let diarizer: DiarizationEngine?
+    private let wholeFileDiarizer: WholeFileDiarizationEngine?
 
-    public init(transcriber: TranscriptionEngine, diarizer: DiarizationEngine?) {
+    public init(
+        transcriber: TranscriptionEngine,
+        diarizer: DiarizationEngine?,
+        wholeFileDiarizer: WholeFileDiarizationEngine? = nil
+    ) {
         self.transcriber = transcriber
         self.diarizer = diarizer
+        self.wholeFileDiarizer = wholeFileDiarizer
     }
 
     public struct Result {
@@ -56,7 +62,10 @@ public final class ProcessingPipeline {
         try await transcriber.load()
         try Task.checkCancellation()
 
-        // Etapa 2 — janelas: transcrição + diarização (0,15 → 0,92)
+        // Etapa 2 — janelas: transcrição (+ diarização em fluxo, quando o
+        // motor global não está em uso). Frações: com VBx as janelas ocupam
+        // 0,15→0,70 e a diarização global 0,70→0,92; sem VBx, 0,15→0,92.
+        let transcribeShare = wholeFileDiarizer != nil ? 0.55 : 0.77
         let reader = try WavWindowReader(url: workingWavURL)
         let windows = try makeWindows(reader: reader)
         var allSegments: [TranscribedSegment] = []
@@ -65,8 +74,8 @@ public final class ProcessingPipeline {
 
         for (index, window) in windows.enumerated() {
             try Task.checkCancellation()
-            let windowBase = 0.15 + 0.77 * (Double(index) / Double(windows.count))
-            let windowShare = 0.77 / Double(windows.count)
+            let windowBase = 0.15 + transcribeShare * (Double(index) / Double(windows.count))
+            let windowShare = transcribeShare / Double(windows.count)
 
             let samples = try reader.read(
                 startFrame: window.start,
@@ -83,7 +92,7 @@ public final class ProcessingPipeline {
             if detectedLanguage == nil { detectedLanguage = language_ }
             allSegments.append(contentsOf: segments)
 
-            if let diarizer {
+            if wholeFileDiarizer == nil, let diarizer {
                 try Task.checkCancellation()
                 onProgress(PipelineProgress(
                     stage: .diarizing,
@@ -91,6 +100,18 @@ public final class ProcessingPipeline {
                 ))
                 let spans = try diarizer.diarize(samples: samples, offsetMs: offsetMs)
                 allSpans.append(contentsOf: spans)
+            }
+        }
+
+        // Etapa 2b — diarização global VBx sobre o arquivo inteiro (0,70 → 0,92)
+        if let wholeFileDiarizer {
+            try Task.checkCancellation()
+            onProgress(PipelineProgress(stage: .diarizing, fraction: 0.70))
+            allSpans = try await wholeFileDiarizer.diarize(fileURL: workingWavURL) { fraction in
+                onProgress(PipelineProgress(
+                    stage: .diarizing,
+                    fraction: 0.70 + 0.22 * min(fraction, 1)
+                ))
             }
         }
 
