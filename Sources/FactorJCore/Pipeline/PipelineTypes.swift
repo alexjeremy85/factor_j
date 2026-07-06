@@ -138,11 +138,12 @@ public enum VoiceSensitivity: String, CaseIterable, Identifiable, Sendable {
     }
 
     /// Limiar de similaridade de cosseno do motor padrão (default 0,7;
-    /// menor = mais falantes).
+    /// menor = mais falantes). O valor de "Separar mais" (0,5) foi calibrado
+    /// com reunião real de 5 falantes em áudio de call comprimido.
     public var standardThreshold: Float {
         switch self {
         case .normal: return 0.7
-        case .high: return 0.62
+        case .high: return 0.5
         case .low: return 0.78
         }
     }
