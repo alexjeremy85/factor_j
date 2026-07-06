@@ -116,29 +116,65 @@ public final class SystemAudioTap {
         )
 
         // 5. IOProc: recebe os buffers do tap.
+        //
+        // ATENÇÃO ao layout: o tap costuma entregar PCM Float32
+        // INTERCALADO (L/R alternados num único buffer). Ler intercalado
+        // como se fosse por-canal embaralha as amostras no tempo e produz
+        // áudio "robotizado". Tratamos os dois layouts explicitamente.
+        let isFloat = (asbd.mFormatFlags & kAudioFormatFlagIsFloat) != 0
+        guard asbd.mFormatID == kAudioFormatLinearPCM, isFloat else {
+            cleanup()
+            throw TapError.formatUnavailable(-1)
+        }
+        let isInterleaved = (asbd.mFormatFlags & kAudioFormatFlagIsNonInterleaved) == 0
+        let channels = max(Int(tapFormat.channelCount), 1)
+
         status = AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, queue) {
             [weak self] _, inInputData, _, _, _ in
             guard let self, !self.isPaused, let file = self.file else { return }
-            guard let buffer = AVAudioPCMBuffer(
-                pcmFormat: tapFormat,
-                bufferListNoCopy: inInputData,
-                deallocator: nil
-            ), buffer.frameLength > 0 else { return }
+            let bufferList = UnsafeMutableAudioBufferListPointer(
+                UnsafeMutablePointer(mutating: inInputData))
+            guard bufferList.count > 0 else { return }
 
-            guard let mono = AVAudioPCMBuffer(
-                pcmFormat: monoFormat,
-                frameCapacity: buffer.frameLength
-            ) else { return }
-            mono.frameLength = buffer.frameLength
-            let frames = Int(buffer.frameLength)
-            let channels = Int(tapFormat.channelCount)
-            if let src = buffer.floatChannelData, let dst = mono.floatChannelData {
+            let frames: Int
+            if isInterleaved {
+                frames = Int(bufferList[0].mDataByteSize)
+                    / (MemoryLayout<Float>.size * channels)
+            } else {
+                frames = Int(bufferList[0].mDataByteSize) / MemoryLayout<Float>.size
+            }
+            guard frames > 0,
+                  let mono = AVAudioPCMBuffer(
+                      pcmFormat: monoFormat,
+                      frameCapacity: AVAudioFrameCount(frames)
+                  ),
+                  let dst = mono.floatChannelData?[0]
+            else { return }
+            mono.frameLength = AVAudioFrameCount(frames)
+
+            if isInterleaved {
+                guard let data = bufferList[0].mData?
+                    .assumingMemoryBound(to: Float.self) else { return }
                 for i in 0..<frames {
-                    var sample: Float = 0
-                    for ch in 0..<channels { sample += src[ch][i] }
-                    dst[0][i] = sample / Float(max(channels, 1))
+                    var sum: Float = 0
+                    for ch in 0..<channels { sum += data[i * channels + ch] }
+                    dst[i] = sum / Float(channels)
+                }
+            } else {
+                for i in 0..<frames { dst[i] = 0 }
+                var mixed = 0
+                for buffer in bufferList {
+                    guard let data = buffer.mData?
+                        .assumingMemoryBound(to: Float.self) else { continue }
+                    let count = min(frames, Int(buffer.mDataByteSize) / MemoryLayout<Float>.size)
+                    for i in 0..<count { dst[i] += data[i] }
+                    mixed += 1
+                }
+                if mixed > 1 {
+                    for i in 0..<frames { dst[i] /= Float(mixed) }
                 }
             }
+
             do {
                 try file.write(from: mono)
                 self.onLevel(MicRecorder.rms(mono))

@@ -120,6 +120,8 @@ public final class ProcessingPipeline {
         onProgress(PipelineProgress(stage: .aligning, fraction: 0.92))
         allSegments.sort { $0.startMs < $1.startMs }
         allSpans.sort { $0.startMs < $1.startMs }
+        // Absorve rótulos espúrios de poucos segundos no vizinho temporal.
+        allSpans = DiarizationCleanup.absorbMicroSpeakers(allSpans)
         let turns = Aligner.align(transcription: allSegments, diarization: allSpans)
 
         let result = buildResult(
