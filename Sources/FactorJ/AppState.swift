@@ -206,6 +206,15 @@ final class AppState: ObservableObject {
 
     // MARK: - Ações
 
+    func renameRecording(_ recording: Recording, to newTitle: String) {
+        guard let id = recording.id else { return }
+        do {
+            try database.renameRecording(id: id, title: newTitle)
+        } catch {
+            lastError = "Falha ao renomear: \(error.localizedDescription)"
+        }
+    }
+
     func deleteRecording(_ recording: Recording) {
         guard let id = recording.id else { return }
         processing.cancel(recordingId: id)
