@@ -44,6 +44,9 @@ final class AppState: ObservableObject {
     // Assistente de instalação de modelos (primeiro uso)
     @Published var showSetupAssistant = false
 
+    // Gravação alvo do "Reprocessar com opções…"
+    @Published var reprocessTarget: Recording?
+
     // Fluxo de importação
     @Published var showFileImporter = false
     @Published var pendingImportURLs: [URL] = []
@@ -225,6 +228,30 @@ final class AppState: ObservableObject {
             lastError = "Falha ao excluir: \(error.localizedDescription)"
         }
         if selectedRecordingId == id { selectedRecordingId = nil }
+    }
+
+    /// Reprocessa uma gravação existente com novas opções.
+    func reprocess(
+        _ recording: Recording,
+        language: String?,
+        diarize: Bool,
+        speakersHint: Int?,
+        sensitivity: VoiceSensitivity
+    ) {
+        guard let id = recording.id else { return }
+        do {
+            try database.requeueWithOptions(
+                recordingId: id,
+                language: language,
+                diarize: diarize,
+                speakersHint: speakersHint,
+                clusteringSensitivity: sensitivity == .normal ? nil : sensitivity.rawValue
+            )
+            selectedRecordingId = id
+            processing.kick()
+        } catch {
+            lastError = "Falha ao reprocessar: \(error.localizedDescription)"
+        }
     }
 
     func openSearchHit(_ hit: AppDatabase.SearchHit) {

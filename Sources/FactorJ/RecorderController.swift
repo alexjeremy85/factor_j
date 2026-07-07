@@ -55,8 +55,12 @@ final class RecorderController: ObservableObject {
         Task { await start(sources: .both) }
     }
 
-    func start(sources: RecordingSources, title: String? = nil) async {
+    func start(sources: RecordingSources, title: String? = nil, language: String? = nil) async {
         guard !isRecording, let appState else { return }
+        // Idioma: explícito > padrão dos Ajustes > auto-detect.
+        let defaultLanguage = UserDefaults.standard.string(forKey: "escriba.defaultLanguage")
+        let resolvedLanguage = language
+            ?? (defaultLanguage == "auto" ? nil : defaultLanguage)
 
         if sources.contains(.microphone) {
             guard await MicRecorder.requestPermission() else {
@@ -77,7 +81,7 @@ final class RecorderController: ObservableObject {
                 sourceType: .live,
                 audioPath: "",
                 status: .live,
-                language: nil
+                language: resolvedLanguage
             ))
             guard let id = recording.id else { return }
             createdId = id

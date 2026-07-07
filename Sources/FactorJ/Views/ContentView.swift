@@ -29,6 +29,10 @@ struct ContentView: View {
             SetupAssistantView(modelStore: appState.modelStore)
                 .environmentObject(appState)
         }
+        .sheet(item: $appState.reprocessTarget) { recording in
+            ReprocessSheet(recording: recording)
+                .environmentObject(appState)
+        }
         .background(RecorderSheets(recorder: appState.recorder))
         .dropDestination(for: URL.self) { urls, _ in
             appState.requestImport(urls: urls)

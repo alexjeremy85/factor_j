@@ -113,6 +113,13 @@ struct TranscriptView: View {
             }
             .help("Renomear ou mesclar falantes")
 
+            Button {
+                appState.reprocessTarget = recording
+            } label: {
+                Label("Reprocessar", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .help("Gerar a transcrição de novo com outras opções (idioma, falantes…)")
+
             Menu {
                 ForEach(ExportFormat.allCases) { format in
                     Button(format.displayName) { export(format) }

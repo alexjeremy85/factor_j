@@ -57,12 +57,17 @@ struct RecordingDetailView: View {
                 title: "Falha no processamento",
                 message: recording.errorMessage ?? "Erro desconhecido."
             ) {
-                Button("Reprocessar") {
-                    if let id = recording.id {
-                        appState.processing.retry(recordingId: id)
+                HStack {
+                    Button("Reprocessar") {
+                        if let id = recording.id {
+                            appState.processing.retry(recordingId: id)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Com opções…") {
+                        appState.reprocessTarget = recording
                     }
                 }
-                .buttonStyle(.borderedProminent)
             }
 
         case .done:

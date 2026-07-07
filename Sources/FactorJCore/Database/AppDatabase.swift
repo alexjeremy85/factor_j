@@ -304,6 +304,31 @@ public final class AppDatabase {
         }
     }
 
+    /// Recoloca uma gravação na fila com novas opções de processamento
+    /// (reprocessamento manual — o áudio original é preservado).
+    public func requeueWithOptions(
+        recordingId: Int64,
+        language: String?,
+        diarize: Bool,
+        speakersHint: Int?,
+        clusteringSensitivity: String?
+    ) throws {
+        try writer.write { db in
+            try db.execute(
+                sql: """
+                    UPDATE recording
+                    SET status = ?, errorMessage = NULL, language = ?,
+                        diarize = ?, speakersHint = ?, clusteringSensitivity = ?
+                    WHERE id = ?
+                    """,
+                arguments: [
+                    RecordingStatus.queued.rawValue, language,
+                    diarize, speakersHint, clusteringSensitivity, recordingId,
+                ]
+            )
+        }
+    }
+
     /// Cria um novo falante manualmente (usado em "Atribuir a… > Novo falante").
     @discardableResult
     public func addSpeaker(recordingId: Int64, displayName: String) throws -> Speaker {

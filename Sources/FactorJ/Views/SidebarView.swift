@@ -68,6 +68,11 @@ struct SidebarView: View {
             default:
                 EmptyView()
             }
+            if recording.status == .done || recording.status == .failed {
+                Button("Reprocessar com opções…") {
+                    appState.reprocessTarget = recording
+                }
+            }
             Button("Renomear…") {
                 renameText = recording.title
                 recordingToRename = recording

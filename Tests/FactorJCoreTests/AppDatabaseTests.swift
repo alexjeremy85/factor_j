@@ -174,6 +174,41 @@ import Testing
         #expect(try db.fetchRecording(id: id)?.title == "Reunião de quarta")
     }
 
+    @Test func requeueWithOptionsReplacesSettingsAndClearsError() throws {
+        let recording = try makeRecording()
+        let id = try #require(recording.id)
+        try db.setStatus(recordingId: id, status: .failed, errorMessage: "idioma errado")
+
+        try db.requeueWithOptions(
+            recordingId: id,
+            language: "pt",
+            diarize: true,
+            speakersHint: 4,
+            clusteringSensitivity: "high"
+        )
+
+        let updated = try #require(try db.fetchRecording(id: id))
+        #expect(updated.status == .queued)
+        #expect(updated.errorMessage == nil)
+        #expect(updated.language == "pt")
+        #expect(updated.speakersHint == 4)
+        #expect(updated.voiceSensitivity == .high)
+
+        // Voltar para auto limpa os campos.
+        try db.requeueWithOptions(
+            recordingId: id,
+            language: nil,
+            diarize: false,
+            speakersHint: nil,
+            clusteringSensitivity: nil
+        )
+        let again = try #require(try db.fetchRecording(id: id))
+        #expect(again.language == nil)
+        #expect(again.diarize == false)
+        #expect(again.speakersHint == nil)
+        #expect(again.voiceSensitivity == .normal)
+    }
+
     @Test func renameSpeakerTrimsAndNils() throws {
         let recording = try makeRecording()
         let id = try #require(recording.id)

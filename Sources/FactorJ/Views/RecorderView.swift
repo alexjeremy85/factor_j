@@ -107,8 +107,10 @@ struct RecorderStartSheet: View {
     @ObservedObject var recorder: RecorderController
     @Environment(\.dismiss) private var dismiss
 
+    @AppStorage("escriba.defaultLanguage") private var defaultLanguage = "auto"
     @State private var title = ""
     @State private var sourceOption = 0  // 0 = ambos, 1 = mic, 2 = sistema
+    @State private var language = "auto"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -124,6 +126,13 @@ struct RecorderStartSheet: View {
                 Text("Só áudio do sistema").tag(2)
             }
             .pickerStyle(.radioGroup)
+
+            Picker("Idioma", selection: $language) {
+                Text("Detectar automaticamente").tag("auto")
+                Text("Português").tag("pt")
+                Text("Inglês").tag("en")
+                Text("Espanhol").tag("es")
+            }
 
             Text("O áudio do sistema captura o que sai das caixas (Teams, Zoom, Meet…). Na primeira vez, o macOS pede autorização.")
                 .font(.caption)
@@ -141,8 +150,15 @@ struct RecorderStartSheet: View {
                     default: .both
                     }
                     let chosenTitle = title
+                    let chosenLanguage = language == "auto" ? nil : language
                     dismiss()
-                    Task { await recorder.start(sources: sources, title: chosenTitle) }
+                    Task {
+                        await recorder.start(
+                            sources: sources,
+                            title: chosenTitle,
+                            language: chosenLanguage
+                        )
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
@@ -150,6 +166,7 @@ struct RecorderStartSheet: View {
         }
         .padding(22)
         .frame(width: 400)
+        .onAppear { language = defaultLanguage }
     }
 }
 
