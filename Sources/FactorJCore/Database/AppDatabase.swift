@@ -262,6 +262,19 @@ public final class AppDatabase {
         }
     }
 
+    /// Renomeia a gravação. Título em branco é ignorado (mantém o anterior),
+    /// pois `title` é obrigatório e aparece na barra lateral.
+    public func renameRecording(id: Int64, title: String) throws {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try writer.write { db in
+            try db.execute(
+                sql: "UPDATE recording SET title = ? WHERE id = ?",
+                arguments: [trimmed, id]
+            )
+        }
+    }
+
     /// Une o falante `source` ao falante `target` (RF: mesclar falantes).
     public func mergeSpeaker(source: Int64, into target: Int64) throws {
         try writer.write { db in

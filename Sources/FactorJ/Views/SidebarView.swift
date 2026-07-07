@@ -3,6 +3,8 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var recordingToRename: Recording?
+    @State private var renameText = ""
 
     var body: some View {
         List(selection: $appState.selectedRecordingId) {
@@ -36,6 +38,19 @@ struct SidebarView: View {
                 }
             }
         }
+        .alert("Renomear gravação", isPresented: Binding(
+            get: { recordingToRename != nil },
+            set: { if !$0 { recordingToRename = nil } }
+        )) {
+            TextField("Título", text: $renameText)
+            Button("Cancelar", role: .cancel) { recordingToRename = nil }
+            Button("OK") {
+                if let recording = recordingToRename {
+                    appState.renameRecording(recording, to: renameText)
+                }
+                recordingToRename = nil
+            }
+        }
     }
 
     @ViewBuilder
@@ -52,6 +67,10 @@ struct SidebarView: View {
                 }
             default:
                 EmptyView()
+            }
+            Button("Renomear…") {
+                renameText = recording.title
+                recordingToRename = recording
             }
             Divider()
             Button("Excluir…", role: .destructive) {

@@ -162,6 +162,18 @@ import Testing
         #expect(next.id == first.id)
     }
 
+    @Test func renameRecordingTrimsAndIgnoresBlank() throws {
+        let recording = try makeRecording()
+        let id = try #require(recording.id)
+
+        try db.renameRecording(id: id, title: "  Reunião de quarta  ")
+        #expect(try db.fetchRecording(id: id)?.title == "Reunião de quarta")
+
+        // Título em branco é ignorado — mantém o anterior.
+        try db.renameRecording(id: id, title: "   ")
+        #expect(try db.fetchRecording(id: id)?.title == "Reunião de quarta")
+    }
+
     @Test func renameSpeakerTrimsAndNils() throws {
         let recording = try makeRecording()
         let id = try #require(recording.id)
